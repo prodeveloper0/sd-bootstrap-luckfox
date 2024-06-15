@@ -1,0 +1,16 @@
+network:
+  interface: eth0
+  address: 192.168.1.100
+  netmask: 255.255.255.0
+  gateway: 192.168.1.1
+applications:
+  - name: Test App 1
+    enabled: true
+    ro: true
+    path: testapp
+    command: "/bin/sh app.sh \"Hello world\""
+  - name: Test App 2
+    enabled: true
+    ro: true
+    path: testapp
+    command: "/bin/sh app.sh \"Goobye world\""

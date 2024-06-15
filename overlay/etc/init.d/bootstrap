@@ -1,0 +1,13 @@
+#!/sbin/openrc-run
+
+
+depend() {
+        need networking
+}
+
+start() {
+        ebegin "Starting SD card bootstrapper"
+        /bootstrap &
+        eend $?
+}
+
