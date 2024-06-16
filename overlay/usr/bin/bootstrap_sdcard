@@ -1,0 +1,67 @@
+#!/usr/bin/python3
+import logging
+import os
+import time
+
+from subprocess import Popen, PIPE
+
+import click
+
+
+logging.basicConfig(level=logging.DEBUG)
+
+
+def mount_block_device(blkdev_path: str, mountpoint: str, ro: bool = True) -> bool:
+    cmd = ['mount', '-t', 'auto', '-o', 'ro' if ro else 'rw', blkdev_path, mountpoint]
+    p = Popen(cmd, stdout=PIPE)
+    p.communicate()
+    return p.returncode == 0
+
+
+def unmount_block_device(mountpoint: str) -> bool:
+    cmd = ['umount', '-l', mountpoint]
+    p = Popen(cmd, stdout=PIPE)
+    p.communicate()
+    return p.returncode == 0
+
+
+def run_external_bootstrapper(blkdev_path: str, read_only: bool, mount_path: str, root_path: str, bootstrapper: str, interpreter: str):
+    try:
+        if mount_block_device(blkdev_path, mount_path, read_only):
+            if os.path.exists(os.path.join(mount_path, root_path, bootstrapper)):
+                logging.info(f'found external bootstrapper in {blkdev_path}')
+                abs_root_path = os.path.join(mount_path, root_path)
+                os.chdir(abs_root_path)
+                os.execl(interpreter, interpreter, bootstrapper, '--blkdev-path', blkdev_path, '--mount-path', mount_path)
+    finally:
+        unmount_block_device(mount_path)
+
+
+@click.command()
+@click.option('--blkdev-path', type=click.Path(), default='/dev/mmcblk1p1')
+@click.option('--read-only', is_flag=True, default=True)
+@click.option('--period', type=int, default=1)
+@click.option('--mount-path', type=click.Path(), default='/mnt/sdcard')
+@click.option('--root-path', type=click.Path(), default='autorun')
+@click.option('--bootstrapper', type=str, default='bootstrap.py')
+@click.option('--interpreter', type=str, default='/usr/bin/python3')
+def main(
+        blkdev_path: str,
+        read_only: bool,
+        period: int,
+        mount_path: str,
+        root_path: str,
+        bootstrapper: str,
+        interpreter: str
+):
+    logging.info('SD Card bootstrap started')
+
+    os.makedirs(mount_path, exist_ok=True)
+
+    while True:
+        run_external_bootstrapper(blkdev_path, read_only, mount_path, root_path, bootstrapper, interpreter)
+        time.sleep(period)
+
+
+if __name__ == '__main__':
+    main()
