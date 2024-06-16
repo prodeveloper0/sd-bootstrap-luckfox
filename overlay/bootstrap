@@ -31,11 +31,8 @@ def run_external_bootstrapper(blkdev_path: str, read_only: bool, mount_path: str
             if os.path.exists(os.path.join(mount_path, root_path, bootstrapper)):
                 logging.info(f'found external bootstrapper in {blkdev_path}')
                 abs_root_path = os.path.join(mount_path, root_path)
-                working_dir_path = os.getcwd()
                 os.chdir(abs_root_path)
-                os.system(f'{interpreter} {bootstrapper} --blkdev-path {blkdev_path} --mount-path {mount_path}')
-                os.chdir(working_dir_path)
-                logging.info(f'external bootstrapper is terminated')
+                os.execl(interpreter, interpreter, bootstrapper, '--blkdev-path', blkdev_path, '--mount-path', mount_path)
     finally:
         unmount_block_device(mount_path)
 
